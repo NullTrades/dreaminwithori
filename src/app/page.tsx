@@ -516,11 +516,31 @@ type FormState = {
 
 function Contact() {
   const [form, setForm] = useState<FormState>({ name: '', email: '', projectType: '', message: '' })
+  const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setSubmitted(true)
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? 'Something went wrong. Please try again.')
+      } else {
+        setSubmitted(true)
+      }
+    } catch {
+      setError('Failed to send. Check your connection and try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -632,24 +652,42 @@ function Contact() {
             />
           </div>
 
+          {error && (
+            <p
+              style={{
+                ...sans,
+                fontSize: '0.875rem',
+                color: '#e57373',
+                padding: '0.75rem 1rem',
+                backgroundColor: 'rgba(229,115,115,0.08)',
+                border: '1px solid rgba(229,115,115,0.2)',
+                borderRadius: '6px',
+                margin: 0,
+              }}
+            >
+              {error}
+            </p>
+          )}
+
           <button
             type="submit"
+            disabled={loading}
             style={{
               ...label,
               color: C.cream,
-              backgroundColor: C.teal,
+              backgroundColor: loading ? 'rgba(25,100,126,0.5)' : C.teal,
               border: 'none',
               padding: '1rem',
               borderRadius: '6px',
-              cursor: 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
               width: '100%',
               fontSize: '0.75rem',
               transition: 'background-color 0.2s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.backgroundColor = '#1a7a97')}
-            onMouseLeave={e => (e.currentTarget.style.backgroundColor = C.teal)}
+            onMouseEnter={e => { if (!loading) e.currentTarget.style.backgroundColor = '#1a7a97' }}
+            onMouseLeave={e => { if (!loading) e.currentTarget.style.backgroundColor = C.teal }}
           >
-            Send message
+            {loading ? 'Sending…' : 'Send message'}
           </button>
         </form>
       )}
